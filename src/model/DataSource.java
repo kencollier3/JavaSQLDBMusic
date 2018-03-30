@@ -16,6 +16,7 @@ public class DataSource {
     public static final String INNER_JOIN = " INNER JOIN ";
     public static final String ON = " ON ";
     public static final String ORDER_BY = " ORDER BY ";
+    public static final String COLLATE_NOCASE = " COLLATE NOCASE ";
 
 
     public static final String TABLE_ALBUMS = "albums";
@@ -53,7 +54,20 @@ public class DataSource {
                     TABLE_ARTISTS + '.' + COLUMN_ARTIST_NAME + " =\"";
 
     public static final String QUERY_ALBUMS_BY_ARTIST_SORT =
-            ORDER_BY + TABLE_ALBUMS + '.' + COLUMN_ARTIST_NAME + " COLLATE NOCASE ";
+            ORDER_BY + TABLE_ALBUMS + '.' + COLUMN_ARTIST_NAME + COLLATE_NOCASE;
+
+    public static final String QUERY_ARTIST_FOR_SONG_START =
+            SELECT + TABLE_ARTISTS + '.' + COLUMN_ARTIST_NAME + ", " +
+                    TABLE_ALBUMS + '.' + COLUMN_ALBUM_NAME + ", " +
+                    TABLE_SONGS + '.' + COLUMN_SONG_TRACK + FROM + TABLE_SONGS +
+                    INNER_JOIN + TABLE_ALBUMS + ON +
+                    TABLE_SONGS + '.' + COLUMN_SONG_ALBUM + " = " + TABLE_ALBUMS + '.' + COLUMN_ALBUM_ID +
+                    INNER_JOIN + TABLE_ARTISTS + ON +
+                    TABLE_ALBUMS + '.' + COLUMN_ALBUM_ARTIST + " = " + TABLE_ARTISTS + '.' + COLUMN_ARTIST_ID +
+                    WHERE + TABLE_SONGS + '.' + COLUMN_SONG_TITLE + " = \"";
+    public static final String QUERY_ARTIST_FOR_SONG_SORT =
+            ORDER_BY + TABLE_ARTISTS + '.' + COLUMN_ARTIST_NAME + ", " +
+                    TABLE_ALBUMS + '.' + COLUMN_ALBUM_NAME + COLLATE_NOCASE;
 
     private Connection conn;
 
@@ -115,15 +129,9 @@ public class DataSource {
         sb.append(artistName);
         sb.append("\"");
 
-        if (sortOrder != ORDER_BY_NONE) {
-            sb.append(QUERY_ALBUMS_BY_ARTIST_SORT);
-            if (sortOrder == ORDER_BY_DESC) {
-                sb.append("DESC");
-            } else {
-                sb.append("ASC");
-            }
-        }
-        System.out.println("SQL statement = " + sb.toString());
+        sortOrder(sortOrder, sb);
+
+        System.out.println("SQL statement: " + sb.toString());
         try (Statement statement = conn.createStatement();
              ResultSet results = statement.executeQuery(sb.toString())) {
 
@@ -137,6 +145,63 @@ public class DataSource {
         } catch (SQLException e) {
             System.out.println("Query failed: " + e.getMessage());
             return null;
+        }
+    }
+
+    public List<SongArtist> queryArtistsForSong(String songName, int sortOrder) {
+        StringBuilder sb = new StringBuilder(QUERY_ARTIST_FOR_SONG_START);
+        sb.append(songName);
+        sb.append("\"");
+
+        sortOrder(sortOrder, sb);
+
+        System.out.println("SQL statement: " + sb.toString());
+        try (Statement statement = conn.createStatement();
+             ResultSet results = statement.executeQuery(sb.toString())) {
+
+            List<SongArtist> songArtists = new ArrayList<>();
+            while (results.next()) {
+                SongArtist songArtist = new SongArtist();
+                songArtist.setArtistName(results.getString(1));
+                songArtist.setAlbumName(results.getString(2));
+                songArtist.setTrack(results.getInt(3));
+                songArtists.add(songArtist);
+            }
+
+            return songArtists;
+
+        } catch (SQLException e) {
+            System.out.println("Query failed: " + e.getMessage());
+            return null;
+        }
+
+    }
+
+    public void querySongsMetadata() {
+        String sql = "SELECT * FROM " + TABLE_SONGS;
+
+        try (Statement statement = conn.createStatement();
+             ResultSet results = statement.executeQuery(sql)) {
+
+            ResultSetMetaData meta = results.getMetaData();
+            int numColumns = meta.getColumnCount();
+            for (int i = 1; i <= numColumns; i++) {
+                System.out.format("Column %d in the songs table is named %s\n", i, meta.getColumnName(i));
+            }
+        } catch (SQLException e) {
+            System.out.println("Query failed: " + e.getMessage());
+        }
+    }
+
+
+    private void sortOrder(int sortOrder, StringBuilder sb) {
+        if (sortOrder != ORDER_BY_NONE) {
+            sb.append(QUERY_ALBUMS_BY_ARTIST_SORT);
+            if (sortOrder == ORDER_BY_DESC) {
+                sb.append("DESC");
+            } else {
+                sb.append("ASC");
+            }
         }
     }
 }
