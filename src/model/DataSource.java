@@ -319,11 +319,12 @@ public class DataSource {
         }
     }
 
-    private int insertSong(String title, String artist, String album, int track) {
+    public void insertSong(String title, String artist, String album, int track) {
         try {
             conn.setAutoCommit(false);
             int artistId = insertArtist(artist);
             int albumId = insertAlbum(album, artistId);
+
             insertIntoSongs.setInt(1, track);
             insertIntoSongs.setString(2, title);
             insertIntoSongs.setInt(3, albumId);
@@ -333,7 +334,7 @@ public class DataSource {
             } else {
                 throw new SQLException("The song insert failed");
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.out.println("Insert song exception: " + e.getMessage());
             try {
                 System.out.println("Performing rollback");
