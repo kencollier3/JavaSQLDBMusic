@@ -56,10 +56,7 @@ public class Main {
         String title = scanner.nextLine();
 
 
-
-
-
-//        songArtists = dataSource.querySongInfoView("Heartless");
+        songArtists = dataSource.querySongInfoView(title);
         if (songArtists.isEmpty()) {
             System.out.println("Couldn't find any artists for the song");
             return;
